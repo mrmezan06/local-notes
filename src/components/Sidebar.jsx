@@ -11,13 +11,13 @@ import {
 
 export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
   const menuItems = [
-    { id: 'notes', label: 'Notes & Lists', icon: FileText },
+    { id: 'notes', label: 'Local Notes', icon: FileText },
     { id: 'vault', label: 'Vault (Password)', icon: ShieldAlert },
-    { id: 'contacts', label: 'My Contacts', icon: Users },
+    { id: 'contacts', label: 'Local Contacts', icon: Users },
     { id: 'backup', label: 'Backup & Sync', icon: Database },
-    { id: 'trash', label: 'Trash Bin', icon: Trash2 },
-    { id: 'stats', label: 'Workspace Stats', icon: PieChart },
-    { id: 'settings', label: 'System Settings', icon: Settings },
+    { id: 'trash', label: 'Recycle Bin', icon: Trash2 },
+    { id: 'stats', label: 'Stats', icon: PieChart },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -50,7 +50,7 @@ export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
 
       <div className="sidebar-footer">
         <button onClick={onLogout} className="btn-logout">
-          <LogOut size={14} /> Log Out Workspace
+          <LogOut size={14} /> Log Out
         </button>
       </div>
     </aside>

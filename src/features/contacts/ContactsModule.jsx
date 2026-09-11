@@ -129,7 +129,7 @@ export default function ContactsModule() {
           className="doc-title-main"
           style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
         >
-          ☎️ My Local ContactsBook
+          Local Workspace
           <span
             style={{
               fontSize: '0.75rem',

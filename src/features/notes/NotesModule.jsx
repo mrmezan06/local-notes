@@ -196,7 +196,7 @@ export default function NotesModule() {
       {!activeNote ? (
         <>
           <div className="doc-header-block">
-            <h1 className="doc-title-main">My Local Documents</h1>
+            <h1 className="doc-title-main">Local Notes</h1>
             <div className="action-trigger-row">
               <button
                 onClick={() => handleCreate('markdown')}
@@ -208,13 +208,13 @@ export default function NotesModule() {
                 onClick={() => handleCreate('checklist')}
                 className="btn btn-teal"
               >
-                + Checklist
+                + Task (List Style)
               </button>
               <button
                 onClick={() => handleCreate('ledger')}
                 className="btn btn-emerald"
               >
-                + Ledger Board
+                + Ledger (Calculation)
               </button>
             </div>
           </div>

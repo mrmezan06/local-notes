@@ -1561,3 +1561,15 @@ body {
   margin-bottom: 1.5rem;
   width: 100%;
 }
+
+/* Vault CSV Import Alignment Wrapper */
+.vault-header-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: white;
+  border: 1px solid var(--border-light);
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+}

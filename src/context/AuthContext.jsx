@@ -7,9 +7,20 @@ import { hashPassword } from '../utils/crypto';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loginPassword, setLoginPassword] = useState('');
-  const [vaultPassword, setVaultPassword] = useState('');
+  // 1. Dynamic State Initialization reading straight from SessionStorage buffers
+  const [user, setUser] = useState(() => {
+    const cachedUser = sessionStorage.getItem('active_session_user');
+    return cachedUser ? JSON.parse(cachedUser) : null;
+  });
+
+  const [loginPassword, setLoginPassword] = useState(() => {
+    return sessionStorage.getItem('active_session_key') || '';
+  });
+
+  const [vaultPassword, setVaultPassword] = useState(() => {
+    return sessionStorage.getItem('active_vault_key') || '';
+  });
+
   const [hasAccount, setHasAccount] = useState(false);
   const [isVaultConfigured, setIsVaultConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,6 +49,10 @@ export function AuthProvider({ children }) {
       vaultKeyCheck: '',
     });
 
+    // Cache to local memory session pools instantly
+    sessionStorage.setItem('active_session_user', JSON.stringify({ username }));
+    sessionStorage.setItem('active_session_key', password);
+
     setLoginPassword(password);
     setUser({ username });
     setHasAccount(true);
@@ -49,6 +64,13 @@ export function AuthProvider({ children }) {
 
     const checkHash = await hashPassword(password);
     if (account.keycheck === checkHash) {
+      // Cache to local memory session pools instantly
+      sessionStorage.setItem(
+        'active_session_user',
+        JSON.stringify({ username }),
+      );
+      sessionStorage.setItem('active_session_key', password);
+
       setLoginPassword(password);
       setUser({ username });
       return true;
@@ -57,7 +79,6 @@ export function AuthProvider({ children }) {
   };
 
   const resetLoginPasswordWithRecovery = async (recoveryCode, newPassword) => {
-    // FIXED: Added .toCollection() wrapper for Dexie syntax compliance
     const account = await db.auth.toCollection().first();
     if (!account) return false;
 
@@ -67,26 +88,33 @@ export function AuthProvider({ children }) {
     const newLoginHash = await hashPassword(newPassword);
     await db.auth.update(account.id, { keycheck: newLoginHash });
 
+    sessionStorage.setItem(
+      'active_session_user',
+      JSON.stringify({ username: account.username }),
+    );
+    sessionStorage.setItem('active_session_key', newPassword);
+
     setLoginPassword(newPassword);
     setUser({ username: account.username });
     return true;
   };
 
   const configureVaultKey = async (vaultKey) => {
-    // FIXED: Added .toCollection() wrapper for Dexie syntax compliance
     const account = await db.auth.toCollection().first();
     if (!account) return;
     const hashedVaultKey = await hashPassword(vaultKey);
     await db.auth.update(account.id, { vaultKeyCheck: hashedVaultKey });
+
+    sessionStorage.setItem('active_vault_key', vaultKey);
     setVaultPassword(vaultKey);
     setIsVaultConfigured(true);
   };
 
   const unlockVault = async (vaultKey) => {
-    // FIXED: Added .toCollection() wrapper for Dexie syntax compliance
     const account = await db.auth.toCollection().first();
     const hashCheck = await hashPassword(vaultKey);
     if (account.vaultKeyCheck === hashCheck) {
+      sessionStorage.setItem('active_vault_key', vaultKey);
       setVaultPassword(vaultKey);
       return true;
     }
@@ -94,7 +122,6 @@ export function AuthProvider({ children }) {
   };
 
   const resetVaultKeyWithRecovery = async (recoveryCode, newVaultKey) => {
-    // FIXED: Added .toCollection() wrapper for Dexie syntax compliance
     const account = await db.auth.toCollection().first();
     if (!account) return false;
 
@@ -104,16 +131,20 @@ export function AuthProvider({ children }) {
     const newVaultHash = await hashPassword(newVaultKey);
     await db.auth.update(account.id, { vaultKeyCheck: newVaultHash });
 
+    sessionStorage.setItem('active_vault_key', newVaultKey);
     setVaultPassword(newVaultKey);
     setIsVaultConfigured(true);
     return true;
   };
 
   const lockVaultInstantly = () => {
+    sessionStorage.removeItem('active_vault_key');
     setVaultPassword('');
   };
 
   const logout = () => {
+    // Shred all session footprints cleanly on manual termination
+    sessionStorage.clear();
     setUser(null);
     setLoginPassword('');
     setVaultPassword('');

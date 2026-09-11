@@ -5,9 +5,10 @@ import { db } from '../../db/database';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { encryptData, decryptData } from '../../utils/crypto';
+import { parseVaultCSV } from '../../utils/csvParser'; // Import the CSV engine
 import VaultLogForm from './components/VaultLogForm';
 import VaultRecordRow from './components/VaultRecordRow';
-import { Search, Lock, HelpCircle } from 'lucide-react';
+import { Search, Lock, HelpCircle, FileSpreadsheet } from 'lucide-react';
 
 export default function VaultModule() {
   const {
@@ -18,11 +19,10 @@ export default function VaultModule() {
     resetVaultKeyWithRecovery,
   } = useAuth();
   const { showToast } = useToast();
-
+  
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState('');
-
-  // Gate Security Access Input States
+  
   const [gateInput, setGateInput] = useState('');
   const [isGateRecoverMode, setIsGateRecoverMode] = useState(false);
   const [recoveryToken, setRecoveryToken] = useState('');
@@ -56,9 +56,7 @@ export default function VaultModule() {
   }, [vaultPassword]);
 
   useEffect(() => {
-    if (vaultPassword) {
-      loadVault();
-    }
+    if (vaultPassword) loadVault();
   }, [vaultPassword, loadVault]);
 
   const handleGateSubmit = async (e) => {
@@ -106,13 +104,67 @@ export default function VaultModule() {
     loadVault();
   };
 
+  // CSV Ingestion Handler
+  const handleImportCSVPasswords = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !vaultPassword) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const parsedAccounts = parseVaultCSV(event.target.result);
+        if (parsedAccounts.length === 0) {
+          return showToast(
+            'No valid accounts found. Ensure headers contain URL, Username, and Password columns.',
+            'warning',
+          );
+        }
+
+        let importSuccessCount = 0;
+
+        // Loop and independently encrypt each entry using your specific vault password
+        for (let account of parsedAccounts) {
+          const cipherPayload = {
+            url: account.url,
+            username: account.username,
+            accountPassword: account.password, // map back to form values structure
+            metadata: account.metadata,
+          };
+
+          const encryptedCipher = await encryptData(
+            JSON.stringify(cipherPayload),
+            vaultPassword,
+          );
+          await db.vault.add({
+            label: account.url,
+            encryptedCipher,
+            isDeleted: 0,
+          });
+          importSuccessCount++;
+        }
+
+        showToast(
+          `Successfully processed and encrypted ${importSuccessCount} accounts.`,
+          'success',
+        );
+        loadVault();
+      } catch (err) {
+        showToast(
+          'Error parsing file layout. Ensure it is a valid CSV formatting stream.',
+          'error',
+        );
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Clear file element target reference
+  };
+
   const softDelete = async (id) => {
     await db.vault.update(id, { isDeleted: 1 });
     showToast('Record moved to trash bin.', 'warning');
     loadVault();
   };
 
-  // Cryptographic Key Gate Block [INDEX]
   if (!vaultPassword) {
     return (
       <div className="vault-gate-screen card">
@@ -128,9 +180,7 @@ export default function VaultModule() {
                 marginBottom: '0.5rem',
               }}
             >
-              {isVaultConfigured
-                ? 'Chamber Access Locked'
-                : 'Initialize Vault Cluster'}
+              Chamber Access Locked
             </h2>
             <p
               style={{
@@ -140,9 +190,8 @@ export default function VaultModule() {
                 lineHeight: 1.4,
               }}
             >
-              {isVaultConfigured
-                ? 'Provide your isolated Vault Master Key to load passwords context [INDEX].'
-                : 'Configure a secondary password separate from your workspace login credentials.'}
+              Provide your isolated Vault Master Key to load passwords context
+              [INDEX].
             </p>
             <form
               onSubmit={handleGateSubmit}
@@ -296,31 +345,71 @@ export default function VaultModule() {
   );
 
   return (
-    <div className="vault-layout-grid">
-      <div className="vault-sidebar-stack">
-        <div className="card profile-container-badge">
-          <div>
-            <div className="profile-label-meta">Chamber Active</div>
-            <div className="profile-title-active">🔒 Sealed Container</div>
-          </div>
+    <div>
+      {/* Vault Dashboard Info Header Bar */}
+      <div className="vault-header-actions-row">
+        <div>
+          <h2
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              color: '#0f172a',
+              margin: 0,
+            }}
+          >
+            📦 Secured Password Chamber
+          </h2>
+          <p
+            style={{
+              fontSize: '0.72rem',
+              color: 'var(--text-muted)',
+              marginTop: '0.15rem',
+              margin: 0,
+            }}
+          >
+            Total active credentials: <strong>{records.length} items</strong>.
+          </p>
         </div>
-        <VaultLogForm onCommit={handleAddRecord} />
-      </div>
-      <div>
-        <div className="vault-search-bar">
-          <Search size={16} style={{ color: '#94a3b8' }} />
+
+        {/* Bulk Password CSV File Upload trigger */}
+        <label
+          className="btn btn-teal"
+          style={{
+            cursor: 'pointer',
+            fontSize: '0.72rem',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <FileSpreadsheet size={14} /> Bulk Import CSV Passwords
           <input
-            type="text"
-            placeholder="Search localized secrets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="vault-search-input"
+            type="file"
+            accept=".csv"
+            onChange={handleImportCSVPasswords}
+            style={{ display: 'none' }}
           />
+        </label>
+      </div>
+
+      <div className="vault-layout-grid">
+        <div className="vault-sidebar-stack">
+          <VaultLogForm onCommit={handleAddRecord} />
         </div>
-        <div className="vault-records-stack">
-          {filteredLogs.map((item) => (
-            <VaultRecordRow key={item.id} item={item} onDelete={softDelete} />
-          ))}
+        <div>
+          <div className="vault-search-bar">
+            <Search size={16} style={{ color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Search localized secrets..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="vault-search-input"
+            />
+          </div>
+          <div className="vault-records-stack">
+            {filteredLogs.map((item) => (
+              <VaultRecordRow key={item.id} item={item} onDelete={softDelete} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

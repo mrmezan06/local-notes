@@ -145,18 +145,18 @@ export default function StatsModule() {
           }}
         >
           <PieChart size={20} style={{ color: 'var(--color-sky)' }} /> Workspace
-          Metrics Dashboard
+          Metrics
         </h1>
         <p
           style={{
             fontSize: '0.75rem',
             color: 'var(--text-muted)',
-            marginTop: '0.25rem',
-            margin: 0,
+            marginTop: '0.5rem',
+            marginLeft: '1.8rem',
           }}
         >
           Real-time structural health overview, data indexes footprint metrics,
-          and audit configurations tracing.
+          and audit configurations tracking in the overall system [DB].
         </p>
       </div>
 
@@ -171,7 +171,7 @@ export default function StatsModule() {
                 metrics.checklistsCount +
                 metrics.ledgersCount}
             </div>
-            <div className="stat-label-muted">Active Documents</div>
+            <div className="stat-label-muted">Local Notes</div>
           </div>
         </div>
         <div className="card stat-metric-card">
@@ -200,7 +200,7 @@ export default function StatsModule() {
             <div className="stat-value-big">
               {formatSize(metrics.estimatedStorageBytes)}
             </div>
-            <div className="stat-label-muted">IndexedDB Footprint</div>
+            <div className="stat-label-muted">Database Footprint</div>
           </div>
         </div>
       </div>
@@ -229,10 +229,10 @@ export default function StatsModule() {
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ paddingBottom: '0.5rem' }}>
-                  Storage Data Store Namespace
+                  Storage Data Namespace
                 </th>
                 <th style={{ paddingBottom: '0.5rem' }}>
-                  Active Row Metric Count
+                  Local Row Metric Count
                 </th>
               </tr>
             </thead>

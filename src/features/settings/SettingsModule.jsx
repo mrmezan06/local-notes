@@ -71,18 +71,19 @@ export default function SettingsModule() {
             gap: '0.5rem',
           }}
         >
-          <Settings size={20} style={{ color: 'var(--color-sky)' }} /> System
-          Settings Menu
+          <Settings size={20} style={{ color: 'var(--color-sky)' }} /> Secured
+          System Menu
         </h1>
         <p
           style={{
             fontSize: '0.75rem',
             color: 'var(--text-muted)',
             marginTop: '0.25rem',
+            marginLeft: '1.8rem',
           }}
         >
-          Update account configuration hashes or use emergency credentials to
-          recover locked workspace parameters.
+          Update system password or reset vault using emergency recovery token
+          [DB].
         </p>
       </div>
 
@@ -101,15 +102,15 @@ export default function SettingsModule() {
               paddingBottom: '0.5rem',
             }}
           >
-            <Key size={15} style={{ color: 'var(--color-sky)' }} /> Change Login
-            Password
+            <Key size={15} style={{ color: 'var(--color-sky)' }} /> Change
+            System Password
           </h2>
           <form
             onSubmit={handleUpdateLoginPassword}
             style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
           >
             <div>
-              <label className="form-label">Current Password *</label>
+              <label className="form-label">Current System Password *</label>
               <div className="input-with-toggle-wrapper">
                 <input
                   type={showOldPass ? 'text' : 'password'}
@@ -134,7 +135,7 @@ export default function SettingsModule() {
             </div>
 
             <div>
-              <label className="form-label">New Workspace Password *</label>
+              <label className="form-label">Assign System Password *</label>
               <div className="input-with-toggle-wrapper">
                 <input
                   type={showNewPass ? 'text' : 'password'}
@@ -163,7 +164,7 @@ export default function SettingsModule() {
               className="btn btn-sky"
               style={{ width: '100%', padding: '0.65rem', marginTop: '0.5rem' }}
             >
-              Update Workspace Hash
+              Update System Password
             </button>
           </form>
         </div>
@@ -186,8 +187,8 @@ export default function SettingsModule() {
               color: '#92400e',
             }}
           >
-            <Shield size={15} style={{ color: '#d97706' }} /> Emergency Key
-            Override Reset
+            <Shield size={15} style={{ color: '#d97706' }} /> Emergency Vault
+            Password Recovery
           </h2>
           <form
             onSubmit={handleSystemWideOverride}
@@ -195,7 +196,7 @@ export default function SettingsModule() {
           >
             <div>
               <label className="form-label" style={{ color: '#92400e' }}>
-                Emergency Recovery Code Token *
+                Emergency Recovery Token *
               </label>
               <div className="input-with-toggle-wrapper">
                 <input
@@ -225,7 +226,7 @@ export default function SettingsModule() {
 
             <div>
               <label className="form-label" style={{ color: '#92400e' }}>
-                Assign New Login Password *
+                Assign Vault Password *
               </label>
               <div className="input-with-toggle-wrapper">
                 <input
@@ -261,7 +262,7 @@ export default function SettingsModule() {
                 marginTop: '0.5rem',
               }}
             >
-              Override System Passwords
+              Override Vault Passwords
             </button>
           </form>
         </div>

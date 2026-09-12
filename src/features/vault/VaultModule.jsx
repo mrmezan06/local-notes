@@ -1,14 +1,20 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../../db/database';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { encryptData, decryptData } from '../../utils/crypto';
-import { parseVaultCSV } from '../../utils/csvParser'; // Import the CSV engine
+import { parseVaultCSV } from '../../utils/csvParser';
+import { buildVaultCSVString } from '../../utils/csvBuilder';
+import { useVaultSearch } from './hooks/useVaultSearch';
+
+import VaultGate from './components/VaultGate';
+import VaultHeaderBar from './components/VaultHeaderBar';
+import VaultSelectionBar from './components/VaultSelectionBar';
 import VaultLogForm from './components/VaultLogForm';
 import VaultRecordRow from './components/VaultRecordRow';
-import { Search, Lock, HelpCircle, FileSpreadsheet } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 export default function VaultModule() {
   const {
@@ -19,380 +25,288 @@ export default function VaultModule() {
     resetVaultKeyWithRecovery,
   } = useAuth();
   const { showToast } = useToast();
-  
+
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState('');
-  
-  const [gateInput, setGateInput] = useState('');
-  const [isGateRecoverMode, setIsGateRecoverMode] = useState(false);
-  const [recoveryToken, setRecoveryToken] = useState('');
-  const [newVaultKey, setNewVaultKey] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Edit mode tracking state
+  const [editingRecord, setEditingContact] = useState(null);
+
+  const filteredLogs = useVaultSearch(records, search);
+
+  const localTimestamp = new Date()
+    .toLocaleString()
+    // eslint-disable-next-line no-useless-escape
+    .replace(/[\/:]/g, '-')
+    .replace(/,/g, '')
+    .replace(/\s+/g, '_');
 
   const loadVault = useCallback(async () => {
     if (!vaultPassword) return;
-    const list = await db.vault.where({ isDeleted: 0 }).toArray();
-    const decryptedList = await Promise.all(
-      list.map(async (item) => {
-        try {
-          const decryptedStr = await decryptData(
-            item.encryptedCipher,
-            vaultPassword,
-          );
-          return { ...item, secret: JSON.parse(decryptedStr) };
-        } catch (e) {
-          return {
-            ...item,
-            secret: {
-              url: 'Decryption Error',
-              username: '',
-              password: '',
-              metadata: '',
-            },
-          };
-        }
-      }),
-    );
-    setRecords(decryptedList);
+    try {
+      const list = await db.vault.where({ isDeleted: 0 }).toArray();
+      const decryptedList = await Promise.all(
+        list.map(async (item) => {
+          try {
+            const decryptedStr = await decryptData(
+              item.encryptedCipher,
+              vaultPassword,
+            );
+            return { ...item, secret: JSON.parse(decryptedStr) };
+          } catch (e) {
+            return {
+              ...item,
+              secret: {
+                url: 'Decryption Error',
+                username: '',
+                password: '',
+                metadata: '',
+              },
+            };
+          }
+        }),
+      );
+      setRecords(decryptedList);
+    } catch {
+      // Fail silently
+    }
   }, [vaultPassword]);
 
   useEffect(() => {
     if (vaultPassword) loadVault();
   }, [vaultPassword, loadVault]);
 
-  const handleGateSubmit = async (e) => {
-    e.preventDefault();
-    if (!isVaultConfigured) {
-      if (gateInput.length < 6)
-        return showToast('Vault key must be 6+ characters.', 'error');
-      await configureVaultKey(gateInput);
-      showToast('Vault password configured.', 'success');
-    } else {
-      const authorized = await unlockVault(gateInput);
-      if (authorized) {
-        showToast('Vault Chamber Unlocked.', 'success');
-      } else {
-        showToast('Invalid Vault Master Key.', 'error');
-      }
-    }
-    setGateInput('');
-  };
-
-  const handleVaultRecoveryReset = async (e) => {
-    e.preventDefault();
-    const success = await resetVaultKeyWithRecovery(recoveryToken, newVaultKey);
-    if (success) {
-      showToast('Vault Master key reset successfully.', 'success');
-      setIsGateRecoverMode(false);
-      setRecoveryToken('');
-      setNewVaultKey('');
-    } else {
-      showToast('Invalid recovery token authentication parameters.', 'error');
-    }
-  };
-
+  // Handle both dynamic new row entries or existing encryption modifications [INDEX]
   const handleAddRecord = async (formPayload) => {
-    const encryptedCipher = await encryptData(
-      JSON.stringify(formPayload),
-      vaultPassword,
-    );
-    await db.vault.add({
-      label: formPayload.url,
-      encryptedCipher,
-      isDeleted: 0,
-    });
-    showToast('Log committed to vault ledger.', 'success');
+    try {
+      const encryptedCipher = await encryptData(
+        JSON.stringify(formPayload),
+        vaultPassword,
+      );
+
+      if (editingRecord) {
+        // Modify the entry in your local database [INDEX]
+        await db.vault.update(editingRecord.id, {
+          label: formPayload.name,
+          encryptedCipher,
+        });
+        showToast('Password record modified successfully.', 'success');
+        setEditingContact(null);
+      } else {
+        // Create an entirely new row index [INDEX]
+        await db.vault.add({
+          label: formPayload.name,
+          encryptedCipher,
+          isDeleted: 0,
+        });
+        showToast('Log committed to vault ledger.', 'success');
+      }
+      loadVault();
+    } catch {
+      showToast('Encryption write transaction failed.', 'error');
+    }
+  };
+
+  const softDelete = async (id) => {
+    await db.vault.update(id, { isDeleted: 1 });
+    setSelectedIds((prev) => prev.filter((x) => x !== id));
+    showToast('Record moved to trash bin.', 'warning');
     loadVault();
   };
 
-  // CSV Ingestion Handler
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedIds(filteredLogs.map((r) => r.id));
+  };
+
+  const triggerCSVDownloadStream = (targetArray, filename) => {
+    const csvContent = buildVaultCSVString(targetArray);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSelectedCSV = () => {
+    const targets = records.filter((r) => selectedIds.includes(r.id));
+    triggerCSVDownloadStream(
+      targets,
+      `selected_${selectedIds.length}_passwords_exported_at_${localTimestamp}.csv`,
+    );
+  };
+
+  // Place this method directly under your clearSelectionArrays() block:
+  const handleDeleteSelectedBulk = async () => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      for (let id of selectedIds) {
+        await db.vault.update(id, { isDeleted: 1 });
+      }
+      showToast(
+        `Bulk complete: ${selectedIds.length} records moved to Trash Bin.`,
+        'warning',
+      );
+      setSelectedIds([]); // Clear selection check states array cleanly
+      loadVault();
+    } catch {
+      showToast('A bulk operation database write error occurred.', 'error');
+    }
+  };
+
+  const handleExportAllFullCSV = () => {
+    if (records.length === 0)
+      return showToast('No data available to export.', 'warning');
+
+    triggerCSVDownloadStream(
+      records,
+      `full_vault_exported_at_${localTimestamp}.csv`,
+    );
+
+    showToast('All secrets packaged and downloaded safely.', 'success');
+  };
+
   const handleImportCSVPasswords = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !vaultPassword) return;
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
         const parsedAccounts = parseVaultCSV(event.target.result);
-        if (parsedAccounts.length === 0) {
-          return showToast(
-            'No valid accounts found. Ensure headers contain URL, Username, and Password columns.',
-            'warning',
-          );
-        }
-
-        let importSuccessCount = 0;
-
-        // Loop and independently encrypt each entry using your specific vault password
+        if (parsedAccounts.length === 0)
+          return showToast('No valid account founded!', 'warning');
         for (let account of parsedAccounts) {
           const cipherPayload = {
             url: account.url,
             username: account.username,
-            accountPassword: account.password, // map back to form values structure
+            accountPassword: account.password,
             metadata: account.metadata,
           };
-
           const encryptedCipher = await encryptData(
             JSON.stringify(cipherPayload),
             vaultPassword,
           );
           await db.vault.add({
-            label: account.url,
+            label: account.name,
             encryptedCipher,
             isDeleted: 0,
           });
-          importSuccessCount++;
         }
-
         showToast(
-          `Successfully processed and encrypted ${importSuccessCount} accounts.`,
+          `Successfully imported ${parsedAccounts.length} accounts.`,
           'success',
         );
         loadVault();
-      } catch (err) {
-        showToast(
-          'Error parsing file layout. Ensure it is a valid CSV formatting stream.',
-          'error',
-        );
+      } catch {
+        showToast('Error parsing file layout framework.', 'error');
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Clear file element target reference
+    e.target.value = '';
   };
 
-  const softDelete = async (id) => {
-    await db.vault.update(id, { isDeleted: 1 });
-    showToast('Record moved to trash bin.', 'warning');
-    loadVault();
+  const handleGateKeyValidation = async (inputKey) => {
+    if (!isVaultConfigured) {
+      if (inputKey.length < 6) {
+        return showToast(
+          'Vault master key must contain at least 6 characters.',
+          'error',
+        );
+      }
+      try {
+        await configureVaultKey(inputKey);
+        showToast('Vault master key initialized successfully.', 'success');
+        loadVault();
+      } catch {
+        showToast('Failed to write vault master key.', 'error');
+      }
+    } else {
+      try {
+        const authorized = await unlockVault(inputKey);
+        if (authorized) {
+          showToast('Vault Unlocked With Master Key.', 'success');
+          loadVault();
+        } else {
+          showToast('Invalid vault master key.', 'error');
+        }
+      } catch {
+        showToast('System encryption validation stucked', 'error');
+      }
+    }
   };
 
   if (!vaultPassword) {
     return (
-      <div className="vault-gate-screen card">
-        {!isGateRecoverMode ? (
-          <>
-            <div className="vault-gate-icon-frame">
-              <Lock size={24} />
-            </div>
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                marginBottom: '0.5rem',
-              }}
-            >
-              Chamber Access Locked
-            </h2>
-            <p
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-muted)',
-                marginBottom: '1.5rem',
-                lineHeight: 1.4,
-              }}
-            >
-              Provide your isolated Vault Master Key to load passwords context
-              [INDEX].
-            </p>
-            <form
-              onSubmit={handleGateSubmit}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-              }}
-            >
-              <input
-                type="password"
-                placeholder={
-                  isVaultConfigured
-                    ? 'Enter Vault Master Key *'
-                    : 'Configure Vault Master Key *'
-                }
-                required
-                value={gateInput}
-                onChange={(e) => setGateInput(e.target.value)}
-                className="form-input"
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderColor: '#e2e8f0',
-                  color: '#0f172a',
-                }}
-              />
-              <button
-                type="submit"
-                className="btn btn-sky"
-                style={{ padding: '0.7rem' }}
-              >
-                {isVaultConfigured
-                  ? 'Authorize Cryptography Key'
-                  : 'Commit Configuration Map'}
-              </button>
-            </form>
-            {isVaultConfigured && (
-              <button
-                onClick={() => setIsGateRecoverMode(true)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.7rem',
-                  cursor: 'pointer',
-                  marginTop: '1rem',
-                  textDecoration: 'underline',
-                }}
-              >
-                Lost Vault Key? Recover Chamber
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <div
-              className="vault-gate-icon-frame"
-              style={{ backgroundColor: '#fef3c7', color: '#d97706' }}
-            >
-              <HelpCircle size={24} />
-            </div>
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                marginBottom: '0.5rem',
-              }}
-            >
-              Recover Vault Access
-            </h2>
-            <p
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-muted)',
-                marginBottom: '1.5rem',
-                lineHeight: 1.4,
-              }}
-            >
-              Provide your system-wide 16-character Emergency Recovery Token to
-              configure a new Vault Master key.
-            </p>
-            <form
-              onSubmit={handleVaultRecoveryReset}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Workspace Emergency Recovery Token"
-                required
-                value={recoveryToken}
-                onChange={(e) => setRecoveryToken(e.target.value.toUpperCase())}
-                className="form-input"
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderColor: '#e2e8f0',
-                  color: '#0f172a',
-                  fontFamily: 'monospace',
-                }}
-              />
-              <input
-                type="password"
-                placeholder="New Vault Master Key *"
-                required
-                value={newVaultKey}
-                onChange={(e) => setNewVaultKey(e.target.value)}
-                className="form-input"
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderColor: '#e2e8f0',
-                  color: '#0f172a',
-                }}
-              />
-              <div
-                style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsGateRecoverMode(false)}
-                  className="btn"
-                  style={{
-                    backgroundColor: '#e2e8f0',
-                    color: '#475569',
-                    width: '40%',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-sky"
-                  style={{ width: '60%' }}
-                >
-                  Override Key
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </div>
+      <VaultGate
+        isVaultConfigured={isVaultConfigured}
+        onGateSubmit={handleGateKeyValidation}
+        onRecoveryReset={resetVaultKeyWithRecovery}
+      />
     );
   }
 
-  const filteredLogs = records.filter(
-    (r) =>
-      r.label.toLowerCase().includes(search.toLowerCase()) ||
-      r.secret.username.toLowerCase().includes(search.toLowerCase()),
-  );
-
   return (
     <div>
-      {/* Vault Dashboard Info Header Bar */}
-      <div className="vault-header-actions-row">
-        <div>
-          <h2
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              color: '#0f172a',
-              margin: 0,
-            }}
-          >
-            📦 Secured Password Chamber
-          </h2>
-          <p
-            style={{
-              fontSize: '0.72rem',
-              color: 'var(--text-muted)',
-              marginTop: '0.15rem',
-              margin: 0,
-            }}
-          >
-            Total active credentials: <strong>{records.length} items</strong>.
-          </p>
-        </div>
+      <VaultHeaderBar
+        totalCount={records.length}
+        onExportAll={handleExportAllFullCSV}
+        onImportCSV={handleImportCSVPasswords}
+      />
 
-        {/* Bulk Password CSV File Upload trigger */}
-        <label
-          className="btn btn-teal"
-          style={{
-            cursor: 'pointer',
-            fontSize: '0.72rem',
-            borderRadius: 'var(--radius-md)',
-          }}
-        >
-          <FileSpreadsheet size={14} /> Bulk Import CSV Passwords
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleImportCSVPasswords}
-            style={{ display: 'none' }}
-          />
-        </label>
-      </div>
+      {selectedIds.length > 0 && (
+        <VaultSelectionBar
+          selectedCount={selectedIds.length}
+          isAllMarked={selectedIds.length === filteredLogs.length}
+          onSelectAll={selectAllFiltered}
+          onDeselectAll={() => setSelectedIds([])}
+          onExportSelected={handleExportSelectedCSV}
+          onDeleteSelected={handleDeleteSelectedBulk}
+        />
+      )}
 
       <div className="vault-layout-grid">
         <div className="vault-sidebar-stack">
-          <VaultLogForm onCommit={handleAddRecord} />
+          {/* Active Edit Context Indicator Row Banner */}
+          {editingRecord && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                backgroundColor: '#f0f9ff',
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid #bae6fd',
+                fontSize: '0.7rem',
+                color: '#0369a1',
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                alignItems: 'center',
+              }}
+            >
+              <span>Editing: {editingRecord.label}</span>
+              <X
+                size={14}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setEditingContact(null)}
+              />
+            </div>
+          )}
+          <VaultLogForm
+            onCommit={handleAddRecord}
+            initialValues={editingRecord}
+          />
         </div>
         <div>
           <div className="vault-search-bar">
@@ -407,7 +321,14 @@ export default function VaultModule() {
           </div>
           <div className="vault-records-stack">
             {filteredLogs.map((item) => (
-              <VaultRecordRow key={item.id} item={item} onDelete={softDelete} />
+              <VaultRecordRow
+                key={item.id}
+                item={item}
+                isSelected={selectedIds.includes(item.id)}
+                onToggleSelect={toggleSelect}
+                onEdit={setEditingContact}
+                onDelete={softDelete}
+              />
             ))}
           </div>
         </div>

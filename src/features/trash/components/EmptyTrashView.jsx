@@ -1,18 +1,18 @@
-export default function EmptyContactResults() {
+export default function EmptyTrashView() {
   return (
     <div
       className="card"
       style={{
         borderStyle: 'dashed',
         textAlign: 'center',
-        padding: '4rem',
+        padding: '5rem',
         color: 'var(--text-muted)',
         fontStyle: 'italic',
         fontSize: '0.85rem',
-        width: '100%',
+        marginTop: '1.5rem',
       }}
     >
-      No local contact matched in the system of your query.
+      The System Trash Bin Is Empty
     </div>
   );
 }

@@ -1,33 +1,68 @@
 import { useState, useEffect } from 'react';
-import { User, ImagePlus } from 'lucide-react';
+import { User, ImagePlus, X } from 'lucide-react';
 
 export default function ContactForm({ onSave, initialValues }) {
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+
+  // Requirement: Change single fields into Array structures
+  const [phones, setPhones] = useState(['']);
+  const [emails, setEmails] = useState(['']);
   const [avatar, setAvatar] = useState('');
 
-  // Fixed Effect: Defers updates to prevent cascading render warnings
   useEffect(() => {
     const handleStateInjection = () => {
       if (initialValues) {
         setName(initialValues.name || '');
-        setPhone(initialValues.phone || '');
-        setEmail(initialValues.email || '');
+        // Load existing arrays, fallback to baseline row if empty
+        setPhones(
+          initialValues.phones && initialValues.phones.length > 0
+            ? initialValues.phones
+            : [''],
+        );
+        setEmails(
+          initialValues.emails && initialValues.emails.length > 0
+            ? initialValues.emails
+            : [''],
+        );
         setAvatar(initialValues.avatar || '');
       } else {
         setName('');
-        setPhone('');
-        setEmail('');
+        setPhones(['']);
+        setEmails(['']);
         setAvatar('');
       }
     };
 
-    // Defers execution out of the current synchronous execution timeline
     const microTaskTimer = setTimeout(handleStateInjection, 0);
-
     return () => clearTimeout(microTaskTimer);
   }, [initialValues]);
+
+  const handleArrayFieldChange = (index, value, type) => {
+    if (type === 'phone') {
+      const updated = [...phones];
+      updated[index] = value;
+      setPhones(updated);
+    } else {
+      const updated = [...emails];
+      updated[index] = value;
+      setEmails(updated);
+    }
+  };
+
+  const addFieldRow = (type) => {
+    if (type === 'phone') setPhones([...phones, '']);
+    else setEmails([...emails, '']);
+  };
+
+  const removeFieldRow = (index, type) => {
+    if (type === 'phone') {
+      const updated = phones.filter((_, idx) => idx !== index);
+      setPhones(updated.length === 0 ? [''] : updated);
+    } else {
+      const updated = emails.filter((_, idx) => idx !== index);
+      setEmails(updated.length === 0 ? [''] : updated);
+    }
+  };
 
   const handleImageConversion = (e) => {
     const file = e.target.files?.[0];
@@ -39,8 +74,18 @@ export default function ContactForm({ onSave, initialValues }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name || !phone) return;
-    onSave({ name, phone, email, avatar });
+    // Filter out blank inputs before saving to database
+    const filteredPhones = phones.filter((p) => p.trim() !== '');
+    const filteredEmails = emails.filter((m) => m.trim() !== '');
+
+    if (!name || filteredPhones.length === 0) return;
+
+    onSave({
+      name,
+      phones: filteredPhones,
+      emails: filteredEmails,
+      avatar,
+    });
   };
 
   return (
@@ -84,6 +129,7 @@ export default function ContactForm({ onSave, initialValues }) {
             />
           </label>
         </div>
+
         <div>
           <label className="form-label">Full Name *</label>
           <input
@@ -100,37 +146,108 @@ export default function ContactForm({ onSave, initialValues }) {
             }}
           />
         </div>
+
+        {/* Dynamic Multiple Phone Numbers Area */}
         <div>
-          <label className="form-label">Phone Number *</label>
-          <input
-            type="text"
-            placeholder="e.g., 017-186-35644"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="form-input"
+          <label className="form-label">Phone Numbers *</label>
+          {phones.map((phone, idx) => (
+            <div
+              key={idx}
+              style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}
+            >
+              <input
+                type="text"
+                placeholder="e.g., 01718635644"
+                required={idx === 0}
+                value={phone}
+                onChange={(e) =>
+                  handleArrayFieldChange(idx, e.target.value, 'phone')
+                }
+                className="form-input"
+                style={{
+                  backgroundColor: 'white',
+                  borderColor: '#e2e8f0',
+                  color: '#0f172a',
+                }}
+              />
+              {phones.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeFieldRow(idx, 'phone')}
+                  className="btn btn-red"
+                  style={{ padding: '0 0.5rem' }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addFieldRow('phone')}
             style={{
-              backgroundColor: 'white',
-              borderColor: '#e2e8f0',
-              color: '#0f172a',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-sky)',
+              fontSize: '0.7rem',
+              cursor: 'pointer',
+              fontWeight: 600,
             }}
-          />
+          >
+            + Add Another Phone
+          </button>
         </div>
+
+        {/* Dynamic Multiple Email Addresses Area */}
         <div>
-          <label className="form-label">Email Address</label>
-          <input
-            type="email"
-            placeholder="e.g., name@domain.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="form-input"
+          <label className="form-label">Email Addresses</label>
+          {emails.map((email, idx) => (
+            <div
+              key={idx}
+              style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}
+            >
+              <input
+                type="email"
+                placeholder="e.g., name@domain.com"
+                value={email}
+                onChange={(e) =>
+                  handleArrayFieldChange(idx, e.target.value, 'email')
+                }
+                className="form-input"
+                style={{
+                  backgroundColor: 'white',
+                  borderColor: '#e2e8f0',
+                  color: '#0f172a',
+                }}
+              />
+              {emails.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeFieldRow(idx, 'email')}
+                  className="btn btn-red"
+                  style={{ padding: '0 0.5rem' }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addFieldRow('email')}
             style={{
-              backgroundColor: 'white',
-              borderColor: '#e2e8f0',
-              color: '#0f172a',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-sky)',
+              fontSize: '0.7rem',
+              cursor: 'pointer',
+              fontWeight: 600,
             }}
-          />
+          >
+            + Add Another Email
+          </button>
         </div>
+
         <button
           type="submit"
           className="btn btn-sky"

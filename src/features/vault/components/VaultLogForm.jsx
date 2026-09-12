@@ -1,17 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Key, Eye, EyeOff } from 'lucide-react';
 
-export default function VaultLogForm({ onCommit }) {
+export default function VaultLogForm({ onCommit, initialValues }) {
+  const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [metadata, setMetadata] = useState('');
   const [showPass, setShowPass] = useState(false);
 
+  // Safely intercept and load values when editing is triggered
+  useEffect(() => {
+    const injectDataPayload = () => {
+      if (initialValues) {
+        setName(initialValues.label || '');
+        setUrl(initialValues.secret?.url || '');
+        setUsername(initialValues.secret?.username || '');
+        setPassword(
+          initialValues.secret?.accountPassword ||
+            initialValues.secret?.password ||
+            '',
+        );
+        setMetadata(initialValues.secret?.metadata || '');
+      } else {
+        setName('');
+        setUrl('');
+        setUsername('');
+        setPassword('');
+        setMetadata('');
+      }
+    };
+
+    const microtaskTimer = setTimeout(injectDataPayload, 0);
+    return () => clearTimeout(microtaskTimer);
+  }, [initialValues]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!url || !username || !password) return;
-    onCommit({ url, username, password, metadata });
+    if (!name || !username || !password) return;
+    onCommit({ name, url, username, password, metadata });
+    setName('');
     setUrl('');
     setUsername('');
     setPassword('');
@@ -32,23 +60,34 @@ export default function VaultLogForm({ onCommit }) {
           paddingBottom: '0.5rem',
         }}
       >
-        <Key
-          size={16}
-          className="text-sky"
-          style={{ color: 'var(--color-sky)' }}
-        />{' '}
-        Add Secure Log
+        <Key size={16} style={{ color: 'var(--color-sky)' }} />
+        {initialValues ? 'Modify Secured Record' : 'Add Secured Record'}
       </h2>
       <form
         onSubmit={handleSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
       >
         <div>
-          <label className="form-label">URL / App Identifier *</label>
+          <label className="form-label">Account Label Name *</label>
           <input
             type="text"
-            placeholder="e.g., github.com"
+            placeholder="e.g., Google Personal"
             required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="form-input"
+            style={{
+              backgroundColor: 'white',
+              borderColor: '#e2e8f0',
+              color: '#0f172a',
+            }}
+          />
+        </div>
+        <div>
+          <label className="form-label">URL / Application Login Path</label>
+          <input
+            type="text"
+            placeholder="e.g., https://google.com"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="form-input"
@@ -104,7 +143,7 @@ export default function VaultLogForm({ onCommit }) {
         <div>
           <label className="form-label">Secure Metadata Notes</label>
           <textarea
-            placeholder="Recovery key codes, pins..."
+            placeholder="Recovery key, codes, pins or notes..."
             value={metadata}
             onChange={(e) => setMetadata(e.target.value)}
             className="form-input"
@@ -122,7 +161,7 @@ export default function VaultLogForm({ onCommit }) {
           className="btn btn-sky"
           style={{ width: '100%', padding: '0.7rem' }}
         >
-          + Commit Account
+          {initialValues ? 'Update Account' : 'Commit Account'}
         </button>
       </form>
     </div>

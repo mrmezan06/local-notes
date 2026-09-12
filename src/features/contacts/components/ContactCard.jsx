@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { Phone, Mail, Pencil, Clipboard, Trash2 } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 
@@ -12,19 +13,19 @@ export default function ContactCard({
 
   const handleCopyToClipboard = async () => {
     try {
-      // Formats contact data into a clean text snippet
-      const contactInfo = `Name: ${contact.name}\nPhone: ${contact.phone}${contact.email ? `\nEmail: ${contact.email}` : ''}`;
+      const phonesList = contact.phones ? contact.phones.join(', ') : '';
+      const emailsList = contact.emails ? contact.emails.join(', ') : '';
+      const contactInfo = `Name: ${contact.name}\nPhones: ${phonesList}${emailsList ? `\nEmails: ${emailsList}` : ''}`;
 
       await navigator.clipboard.writeText(contactInfo);
       showToast(`Copied ${contact.name}'s info to clipboard.`, 'success');
     } catch (err) {
-      showToast('Clipboard access was denied.' + err, 'error');
+      showToast('Clipboard access was denied.', 'error');
     }
   };
 
   return (
-    <div className="card contact-profile-card">
-      {/* 1. Multiple-Selection Circular Checkbox Toggle */}
+    <div className="card contact-profile-card" style={{ minHeight: '260px' }}>
       <div className="card-select-anchor">
         <input
           type="checkbox"
@@ -34,7 +35,6 @@ export default function ContactCard({
         />
       </div>
 
-      {/* 2. On-Hover Interactive Floating Action Toolbar Bar */}
       <div className="card-hover-toolbar">
         <button
           onClick={() => onEdit(contact)}
@@ -46,20 +46,19 @@ export default function ContactCard({
         <button
           onClick={handleCopyToClipboard}
           className="toolbar-btn clone"
-          title="Copy Info to Clipboard"
+          title="Copy Info"
         >
           <Clipboard size={13} />
         </button>
         <button
           onClick={() => onDelete(contact.id)}
           className="toolbar-btn delete"
-          title="Move to Trash Bin"
+          title="Move to Trash"
         >
           <Trash2 size={13} />
         </button>
       </div>
 
-      {/* 3. Local Avatar Frame Graphic */}
       <div
         className="avatar-display-circle"
         style={{
@@ -80,32 +79,32 @@ export default function ContactCard({
         )}
       </div>
 
-      {/* 4. Text Meta Labels Data Output */}
       <h3
         className="contact-item-name"
-        style={{ fontSize: '1rem', marginBottom: '0.35rem' }}
+        style={{ fontSize: '1rem', marginBottom: '0.5rem' }}
       >
         {contact.name}
       </h3>
 
-      <div className="contact-communication-row">
-        <Phone size={12} style={{ color: '#94a3b8' }} />
-        <span style={{ color: '#475569', fontWeight: 500 }}>
-          {contact.phone}
-        </span>
-      </div>
-
-      {contact.email && (
-        <div
-          className="contact-communication-row"
-          style={{ marginTop: '0.15rem' }}
-        >
-          <Mail size={12} style={{ color: '#94a3b8' }} />
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-            {contact.email}
-          </span>
+      {/* Loop through multiple phone numbers */}
+      {contact.phones?.map((phone, i) => (
+        <div key={i} className="contact-communication-row">
+          <Phone size={11} style={{ color: '#94a3b8' }} />
+          <span style={{ color: '#475569', fontWeight: 500 }}>{phone}</span>
         </div>
-      )}
+      ))}
+
+      {/* Loop through multiple email addresses */}
+      {contact.emails?.map((email, i) => (
+        <div
+          key={i}
+          className="contact-communication-row"
+          style={{ marginTop: '0.1rem' }}
+        >
+          <Mail size={11} style={{ color: '#94a3b8' }} />
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{email}</span>
+        </div>
+      ))}
     </div>
   );
 }

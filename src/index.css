@@ -716,7 +716,7 @@ body {
   }
 }
 
-/* Interactive Phonebook Card Display Grid */
+/* Contacts Card */
 .contacts-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -736,6 +736,28 @@ body {
   transition: box-shadow 0.2s ease;
   background: white;
 }
+
+.contact-profile-card .card-select-anchor {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  opacity: 0; /* Hidden initially for a clean look when no selection is active */
+  transition: opacity 0.15s ease;
+}
+.contact-profile-card:hover .card-select-anchor {
+  opacity: 1;
+}
+
+.contacts-cards-grid:has(.custom-circle-checkbox:checked) .card-select-anchor {
+  opacity: 1 !important;
+}
+
+/* 3. Keep a checkbox visible if it is explicitly checked */
+.contact-profile-card .custom-circle-checkbox:checked {
+  opacity: 1 !important;
+}
+
 /* Hover Floating Toolbar Container */
 .card-hover-toolbar {
   position: absolute;
@@ -753,7 +775,11 @@ body {
   z-index: 20;
 }
 
-.contact-profile-card:hover .card-hover-toolbar {
+
+
+
+/* .contact-profile-card:hover  */
+.card-hover-toolbar {
   opacity: 1;
 }
 
@@ -805,6 +831,10 @@ body {
   transition: all 0.15s ease;
   background: white;
 }
+.custom-circle-checkbox:hover{
+  display: block;
+}
+
 
 .custom-circle-checkbox:checked {
   border-color: var(--color-sky);
@@ -966,7 +996,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 99999 !important; /* Stack way above sidebars and headers */
   padding: 1rem;
 }
 
@@ -1572,4 +1602,180 @@ body {
   padding: 1rem;
   border-radius: var(--radius-lg);
   margin-bottom: 1.5rem;
+}
+/* Vault Card Selection Layout Modifiers */
+.vault-record-card {
+  position: relative; /* Essential for floating checkboxes and toolbars */
+}
+
+.vault-record-card .card-select-anchor {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  opacity: 0; /* Hidden initially for a clean look when no selection is active */
+  transition: opacity 0.15s ease;
+}
+
+.vault-record-card:hover .card-select-anchor {
+  opacity: 1;
+}
+
+
+.vault-records-stack:has(.custom-circle-checkbox:checked) .card-select-anchor {
+  opacity: 1 !important;
+}
+
+/* 3. Keep a checkbox visible if it is explicitly checked */
+.vault-record-card .custom-circle-checkbox:checked {
+  opacity: 1 !important;
+}
+
+/* Clipboard Button Styling inside Cards */
+.inline-copy-trigger {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem;
+  margin-left: 0.35rem;
+  border-radius: 4px;
+  transition: all 0.1s ease;
+}
+
+.inline-copy-trigger:hover {
+  color: var(--color-sky);
+  background-color: #f1f5f9;
+}
+
+.vault-item {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  
+}
+
+.vault-item-url-line {
+  color: var(--color-sky);
+}
+/* Floating Action Toolbar Bar for Vault Cards */
+.vault-card-hover-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 48px; /* Perfectly aligned to the left of the checkbox position */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 25;
+}
+
+.vault-record-card:hover .vault-card-hover-toolbar {
+  opacity: 1;
+}
+/* Scan & Merge Resolution Center CSS Tokens */
+.merge-modal-container {
+  width: 100%;
+  max-width: 680px;
+  background-color: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.merge-conflict-box {
+  background-color: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.merge-meta-header-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px dashed #cbd5e1;
+  padding-bottom: 0.35rem;
+}
+
+.merge-selection-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .merge-selection-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.merge-option-pill-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.merge-option-pill-label:hover {
+  border-color: var(--color-sky);
+}
+
+.pill-group-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+/* Trash Module Header Alignment Controls */
+.trash-header-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.trash-bulk-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-restore-bulk {
+  background-color: transparent;
+  color: var(--color-sky);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-restore-bulk:hover {
+  background-color: #f0f9ff;
+  border-color: var(--color-sky);
 }

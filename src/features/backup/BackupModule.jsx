@@ -9,6 +9,12 @@ import { Download, Upload } from 'lucide-react';
 export default function BackupModule() {
   const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const localTimestamp = new Date()
+    .toLocaleString()
+    // eslint-disable-next-line no-useless-escape
+    .replace(/[\/:]/g, '-')
+    .replace(/,/g, '')
+    .replace(/\s+/g, '_');
 
   const verifyAndDownload = async (username, password) => {
     const account = await db.auth.where({ username }).first();
@@ -32,14 +38,14 @@ export default function BackupModule() {
 
       const anchor = document.createElement('a');
       anchor.href = downloadUrl;
-      anchor.download = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      anchor.download = `backup_package_at_${localTimestamp}.json`;
       anchor.click();
 
       URL.revokeObjectURL(downloadUrl);
-      showToast('Database package downloaded successfully.', 'success');
+      showToast('Database all modules packed.', 'success');
       return true;
     } catch {
-      showToast('Failed to generate export file.', 'error');
+      showToast('Failed to generate package file.', 'error');
       return false;
     }
   };
@@ -73,12 +79,12 @@ export default function BackupModule() {
         }
 
         showToast(
-          'Backup elements appeneded successfully. Sync complete.',
+          'Package appeneded successfully. Sync with system completed.',
           'success',
         );
         setTimeout(() => window.location.reload(), 1500);
       } catch {
-        showToast('Invalid backup JSON schema structure.', 'error');
+        showToast('Invalid system package.', 'error');
       }
     };
     fileReader.readAsText(file);
@@ -88,35 +94,36 @@ export default function BackupModule() {
     <div>
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
-          🔒 Secured Primary Backup Hub
+          🔒 System Backup & Restore Center
         </h1>
         <p
           style={{
             fontSize: '0.75rem',
             color: 'var(--text-muted)',
-            marginTop: '0.25rem',
+            marginTop: '0.3rem',
+            marginLeft: '1.6rem',
           }}
         >
-          All data exports are symmetrically validated locally. Restore imports
-          merge entries safely without deleting existing fields [INDEX].
+          Export are symmetrically validated in the system. Uploading a backup
+          package in the system doesn't override system data [DB].
         </p>
       </div>
 
       <div className="backup-grid">
         <BackupNode
-          title="System Root Export"
-          description="Export all documents, checklists, phonebooks, and password logs. Requires validation credentials to package securely [INDEX]."
+          title="System Export"
+          description="Export all documents, checklists, phonebooks, and password logs into a single package. Requires system credentials to package securely [DB]."
           icon={<Download size={20} />}
-          actionText="Download Secure Backup"
+          actionText="Download Master Backup"
           actionColor="sky"
           onAction={() => setModalOpen(true)}
           isUpload={false}
         />
         <BackupNode
-          title="System Root Restore"
-          description="Upload your snapshot file to recover and merge workspace configurations directly into your current local system [INDEX]."
+          title="System Restore Backup"
+          description="Upload your backup package to recover data. System didn't override previous data [DB]."
           icon={<Upload size={20} />}
-          actionText="Upload Master Backup"
+          actionText="Upload System Backup Data"
           actionColor="teal"
           onAction={handleImportRestore}
           isUpload={true}

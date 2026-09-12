@@ -53,9 +53,9 @@ export default function AuthScreen() {
         backedUpPassword,
         generatedRecovery,
       );
-      showToast('Master cryptographic profile established.', 'success');
+      showToast('System Initialization Successfull ...', 'success');
     } catch {
-      showToast('A database write transaction error occurred.', 'error');
+      showToast('System Initialization Failed ...', 'error');
     }
   };
 
@@ -63,9 +63,9 @@ export default function AuthScreen() {
     e.preventDefault();
     const success = await loginMaster(username, password);
     if (success) {
-      showToast('Workspace decrypted successfully.', 'success');
+      showToast('System decrypted successfully...', 'success');
     } else {
-      showToast('Invalid login parameters mapping entry.', 'error');
+      showToast('Invalid System parameters mapping entry.', 'error');
     }
   };
 
@@ -76,12 +76,12 @@ export default function AuthScreen() {
       newPassword,
     );
     if (success) {
-      showToast('Master login updated. Identity authorized.', 'success');
+      showToast('System password updated. Identity authorized.', 'success');
       setIsRecoverMode(false);
       setInputRecoveryToken('');
       setNewPassword('');
     } else {
-      showToast('Invalid Recovery Key. Update sequence aborted.', 'error');
+      showToast('Invalid Recovery Token. Update sequence aborted.', 'error');
     }
   };
 
@@ -97,10 +97,10 @@ export default function AuthScreen() {
             >
               <Key size={44} />
             </div>
-            <h2 className="auth-title">Save Recovery Key</h2>
+            <h2 className="auth-title">Save Recovery Token</h2>
             <p className="auth-subtitle">
-              This token is required to reset your master login or vault
-              passwords if forgotten. Copy it securely now.
+              This token is required to reset your system or vault password.
+              Secured it now.
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export default function AuthScreen() {
             className="btn btn-sky"
             style={{ width: '100%', padding: '0.75rem', fontSize: '0.85rem' }}
           >
-            I have saved the key, Open Workspace
+            [ I have stored the recovery token, Open System ]
           </button>
         </div>
       </div>
@@ -144,12 +144,12 @@ export default function AuthScreen() {
                 )}
               </div>
               <h2 className="auth-title">
-                {hasAccount ? 'Unlock Workspace' : 'Setup Identity'}
+                {hasAccount ? 'Unlock System' : 'Setup System Identity'}
               </h2>
               <p className="auth-subtitle">
                 {hasAccount
-                  ? 'Decrypt your locally sandboxed workspace database logs.'
-                  : 'Initialize zero-knowledge client-side encryption.'}
+                  ? '[ Decrypt your local system database ]'
+                  : '[ Initialize zero-knowledge encryption system database ]'}
               </p>
             </div>
 
@@ -159,7 +159,7 @@ export default function AuthScreen() {
               }
             >
               <div className="form-field">
-                <label className="form-label">Username</label>
+                <label className="form-label">System Username</label>
                 <input
                   type="text"
                   required
@@ -169,7 +169,7 @@ export default function AuthScreen() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Master Password</label>
+                <label className="form-label">System Password</label>
                 <input
                   type="password"
                   required
@@ -179,7 +179,7 @@ export default function AuthScreen() {
                 />
               </div>
               <button type="submit" className="btn btn-sky btn-auth-submit">
-                {hasAccount ? 'Unlock Database' : 'Generate Core System'}
+                {hasAccount ? 'Unlock System' : 'Generate Core System Password'}
               </button>
             </form>
 
@@ -189,12 +189,14 @@ export default function AuthScreen() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--text-sidebar)',
+                  color: '#FFFFFF',
                   fontSize: '0.7rem',
                   display: 'block',
                   margin: '1.5rem auto 0 auto',
                   cursor: 'pointer',
-                  textDecoration: 'underline',
+                  backgroundColor: '#056f6c',
+                  padding: '0.4rem',
+                  borderRadius: '0.2rem',
                 }}
               >
                 Forgot Password? Recover Account
@@ -207,19 +209,19 @@ export default function AuthScreen() {
               <div className="auth-icon-wrapper" style={{ color: '#f59e0b' }}>
                 <RefreshCw size={44} />
               </div>
-              <h2 className="auth-title">Reset Workspace Password</h2>
+              <h2 className="auth-title">Reset System Password</h2>
               <p className="auth-subtitle">
-                Provide your emergency recovery key token to override your login
-                credentials [INDEX].
+                [ Provide your emergency recovery token to override your system
+                password. ]
               </p>
             </div>
 
             <form onSubmit={handleAccountRecovery}>
               <div className="form-field">
-                <label className="form-label">Emergency Recovery Code</label>
+                <label className="form-label">Emergency Recovery Token</label>
                 <input
                   type="text"
-                  placeholder="16-CHAR SYMMETRIC CODE"
+                  placeholder="16-LETTER SYMMETRIC CODE"
                   required
                   value={inputRecoveryToken}
                   onChange={(e) =>
@@ -230,7 +232,7 @@ export default function AuthScreen() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">New Master Password</label>
+                <label className="form-label">New System Password</label>
                 <input
                   type="password"
                   required
@@ -255,7 +257,7 @@ export default function AuthScreen() {
                   className="btn btn-sky"
                   style={{ width: '60%' }}
                 >
-                  Reset Credentials
+                  Reset System Password
                 </button>
               </div>
             </form>
